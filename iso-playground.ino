@@ -35,30 +35,41 @@ static const uint8_t imapWidth=7;
 static const uint8_t imapHeight=7;
 
 uint8_t imap[] = {
-  mapFlat+1,    mapFlat+1,    mapFlat+1,  mapFlat+1,   mapFlat+1,   mapRampNW+1, mapFlat,
-  mapFlat+1,    mapFlat+1,    mapFlat+1,  mapFlat+1,   mapFlat+1,   mapRampNW+1, mapFlat,
-  mapFlat+1,    mapFlat+1,   mapFlat+1,  mapFlat+1,   mapFlat,     mapFlat,   mapFlat,
+  tilePlayerSE*16+4,    mapRampNW+3,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1, mapFlat,
+  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1, mapFlat,
+  mapFlat+1,    mapFlat+1,   mapFlatE+2,  mapRampNW+2,   mapFlat+1,     mapRampNW+1,   mapFlat,
   mapRampNE+1,  mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
   mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
   mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
-  mapFlatE+1,   mapKey+2,     mapRampNW+1,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
+  mapFlat+1,   mapKey+2,     mapRampNW+1,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
 };
 
 static const uint8_t soundFalling = 0;
 
+static const uint8_t fixedPoint = 4;
+static const uint8_t fixedPointOne = 1 << fixedPoint;
+static const uint8_t fixedPointHalf = fixedPointOne/2;
+
+static const uint8_t speedWalking = 2;
+
 int load;
 
-int8_t playerX = 4 << 2;
-int8_t playerY = 4 << 2;
-int8_t playerZ = 1 << 2;
+
+int16_t playerX = 4 << fixedPoint;
+int16_t playerY = 4 << fixedPoint;
+int16_t playerZ = 1 << fixedPoint;
 
 int8_t playerTile = tilePlayerSE;
+int8_t playerTileX; 
+int8_t playerTileY;
+int16_t playerOffsetX;
+int16_t playerOffsetY;
 
 
 void setup() {
   // put your setup code here, to run once:
   arduboy.begin();
-  arduboy.setFrameRate(30);
+  arduboy.setFrameRate(60);
   Serial.begin(9600);
 }
 
@@ -70,43 +81,76 @@ void loop() {
   // Set up
   arduboy.pollButtons();
   backGround();
-  
-  for (int8_t mx=0; mx < imapWidth; mx++) {
-    for (int8_t my=0; my < imapHeight; my++) {
 
-      uint8_t z = getHeight(mx,my);
-      uint8_t tile = getTile(mx,my);
+  // Decide on player tile
+  playerTileX = (playerX + 12) >> fixedPoint;
+  playerTileY = (playerY + 12) >> fixedPoint;
 
-      uint8_t zmin = (my<imapHeight-1)  ? getHeight(mx,my+1)+1 : 0;
-      zmin = (mx<imapWidth-1) ? min(zmin,getHeight(mx+1,my)+1) : zmin;
+  // Calc player offset once
+  playerOffsetX = getPlayerOffsetX();
+  playerOffsetY = getPlayerOffsetY();
 
-      for (int8_t mz=min(zmin,z); mz < z; mz++) {
-        sprites.drawPlusMask(screenX(mx,my,mz),screenY(mx,my,mz),isoTiles_16x16,mx==0? tileFlatE: tileFlat);
-      }
-      uint8_t offset = (tile >= tileKey) ? floatOffset() : 0;
-      sprites.drawPlusMask(screenX(mx,my,z),screenY(mx,my,z) - offset,isoTiles_16x16,tile);
 
-      if (coordinatesEqual(playerX+2,playerY+2,mx,my)) {
-        sprites.drawPlusMask(screenFX(playerX,playerY,playerZ),screenFY(playerX,playerY,playerZ)-2,isoTiles_16x16,playerTile);        
-      }
+  // Top triangle  
+  for (int8_t row=0; row < imapHeight; row++) {
+    for (int8_t col=0; col <= min(row,imapWidth-1); col++) {
+      drawMap(col,row-col);
     }
   }
 
-  // Main Character
+  // Bottom triangle
+  for (int8_t row=1; row < imapWidth; row++) {
+    for (int8_t col=0; col < imapWidth-row; col++) {
+      drawMap(row+col,imapHeight-1-col);
+    }
+  }
+  
+  movement();
 
+  // CPU Lading
   if (arduboy.everyXFrames(32)) {
     load = (load + arduboy.cpuLoad())/2;
   }
-
-  movement();
-
   arduboy.setCursor(0,0);
   arduboy.print(load);
+
+  // Display screen
   arduboy.display();
+}
+
+void drawMap(uint8_t mx, uint8_t my) {
+  uint8_t z = getHeight(mx,my);
+  uint8_t tile = getTile(mx,my);
+  uint8_t zmin = (my<imapHeight-1)  ? getCompareHeight(mx,my+1)+1 : 0;
+  zmin = (mx<imapWidth-1) ? min(zmin,getCompareHeight(mx+1,my)+1) : zmin;
+  zmin = isObject(tile) ? min(zmin,z-1) : zmin;
+
+  for (int8_t mz=min(zmin,z); mz < z; mz++) {
+    sprites.drawPlusMask(playerOffsetX+screenX(mx,my,mz),playerOffsetY+screenY(mx,my,mz),isoTiles_16x16,mx==0? tileFlatE: tileFlat);
+  }
+  uint8_t offset = isObject(tile) ? floatOffset() : 0;
+  sprites.drawPlusMask(playerOffsetX+screenX(mx,my,z),playerOffsetY+screenY(mx,my,z) - offset,isoTiles_16x16,tile);
+
+  if (isPlayerTile(mx,my)) {
+    //sprites.drawPlusMask(screenFX(playerX,playerY,playerZ),screenFY(playerX,playerY,playerZ)-2,isoTiles_16x16,playerTile);   
+    sprites.drawPlusMask((WIDTH-16)/2,(HEIGHT-16)/2,isoTiles_16x16,playerTile);   
+  }
+}
+
+bool isPlayerTile(uint8_t mx, uint8_t my) {
+  return (mx==playerTileX) && (my==playerTileY);
 }
 
 uint8_t getHeight(uint8_t mx, uint8_t my) {
   return imap[mx+my*imapWidth] & 0xf;
+}
+
+uint8_t getCompareHeight(uint8_t mx, uint8_t my) {
+  return getHeight(mx,my) - isObject(getTile(mx,my));
+}
+
+bool isObject(uint8_t tile) {
+  return (tile >= tileKey);
 }
 
 uint8_t floatOffset() {
@@ -119,15 +163,15 @@ uint8_t getTile(uint8_t mx, uint8_t my) {
 }
 
 uint8_t playerMX() {
-  return (playerX + 2) >> 2;
+  return (playerX + fixedPointHalf) >> fixedPoint;
 }
 
 uint8_t playerMY() {
-  return (playerY + 2) >> 2;
+  return (playerY + fixedPointHalf) >> fixedPoint;
 }
 
 bool coordinatesEqual(uint8_t fx, uint8_t fy, uint8_t mx, uint8_t my) {
-  return ((fx>>2) == mx) && ((fy>>2) == my);  
+  return ((fx>>fixedPoint) == mx) && ((fy>>fixedPoint) == my);  
 }
 
 void backGround() {
@@ -143,16 +187,24 @@ int8_t screenX(int8_t mx, int8_t my, int8_t mz) {
 }
 
 int8_t screenY(uint8_t mx, uint8_t my, int8_t mz) {
-  return (mx+my)*tileWidth/4 + tileThickness*(0-mz);
+  return (mx+my)*tileWidth/4 - mz*tileThickness;
+}
+
+int16_t getPlayerOffsetX() {
+  return (WIDTH-16)/2 - screenFX(playerX,playerY,playerZ);
+}
+
+int16_t getPlayerOffsetY() {
+  return (HEIGHT-16)/2 - screenFY(playerX,playerY,playerZ);
 }
 
 
-int8_t screenFX(int8_t mx, int8_t my, int8_t mz) {
-  return (WIDTH-16)/2 + (mx-my)*tileWidth/8;
+int16_t screenFX(int16_t fx, int16_t fy, int16_t fz) {
+  return (WIDTH-16)/2 + (((fx-fy)*tileWidth/2)>>fixedPoint);
 }
 
-int8_t screenFY(uint8_t mx, uint8_t my, int8_t mz) {
-  return (mx+my)*tileWidth/16 + tileThickness/4*(0-mz);
+int16_t screenFY(uint8_t fx, uint8_t fy, int8_t fz) {
+  return (((fx+fy)*tileWidth/4 - fz*tileThickness)>>fixedPoint);
 }
 
 void movement() {
@@ -182,33 +234,37 @@ void movement() {
   if (move) {
       switch(playerTile) {
       case tilePlayerNE:
-        playerY = max(0,playerY-1);
+        playerY = max(0,playerY-speedWalking);
         break;
       case tilePlayerNW:
-        playerX = max(0,playerX-1);
+        playerX = max(0,playerX-speedWalking);
         break;
       case tilePlayerSE:
-        playerX = min((imapWidth-1)*4,playerX+1);
+        playerX = min((imapWidth-1)<<fixedPoint,playerX+speedWalking);
         break;
       case tilePlayerSW:
-        playerY = min((imapHeight-1)*4,playerY+1);
+        playerY = min((imapHeight-1)<<fixedPoint,playerY+speedWalking);
         break;      
     }
-//    Serial.print(playerX);
+//    Serial.print(playerX, HEX);
 //    Serial.print(",");
-//    Serial.print(playerY);
+//    Serial.print(playerY, HEX);
 //    Serial.print(",");
-//    Serial.print(playerZ);
+//    Serial.print(playerZ, HEX);
+//    Serial.print(" : ");
+//    Serial.print(playerTileX);
 //    Serial.print(",");
-//    Serial.print(playerMX());
+//    Serial.print(playerTileY);
+//    Serial.print(" : ");
+//    Serial.print(screenFX(playerX,playerY,playerZ));
 //    Serial.print(",");
-//    Serial.print(playerMY());
+//    Serial.println(screenFY(playerX,playerY,playerZ));
   }
 
   uint8_t fh = heightAtPlayer();
 
   // Check if blocked
-  if (fh >= prevH+4) {
+  if (fh >= prevH+fixedPointOne) {
     playerX = prevX;
     playerY = prevY;
     fh = heightAtPlayer();
@@ -218,13 +274,10 @@ void movement() {
     playerZ++;
   }
   else if (playerZ > fh) {
-    if (playerZ - fh > 2) {
+    if (playerZ - fh > fixedPointHalf) {
       playSound(soundFalling);
     }
-    // Fall slower
-    if (arduboy.everyXFrames(2)) {
-      playerZ--;
-    }
+    playerZ--;
   }
 }
 
@@ -232,8 +285,8 @@ uint8_t heightAtPlayer() {
   uint8_t pmx = playerMX();
   uint8_t pmy = playerMY();
   uint8_t tile = getTile(pmx,pmy);
-  uint8_t fh = (getHeight(pmx,pmy)+ (tile < tileKey))*4;
-  return isRamp(pmx,pmy) ? fh-2 : fh;
+  uint8_t fh = (1+getCompareHeight(pmx,pmy))<<fixedPoint;
+  return isRamp(pmx,pmy) ? fh-fixedPointHalf : fh;
 }
 
 bool isRamp(uint8_t mx, uint8_t my) {
