@@ -15,8 +15,8 @@ static const uint8_t tileFlat     = 0;
 static const uint8_t tileFlatE    = 1;
 static const uint8_t tileRampNE   = 2;
 static const uint8_t tileRampNW   = 3;
-static const uint8_t tileDoorNE   = 4;
-static const uint8_t tileDoorNW   = 5;
+static const uint8_t tileRampSE   = 4;
+static const uint8_t tileRampSW   = 5;
 static const uint8_t tilePlayerNE = 6;
 static const uint8_t tilePlayerNW = 7;
 static const uint8_t tilePlayerSE = 8;
@@ -27,8 +27,8 @@ static const uint8_t mapFlat     = 16*tileFlat;
 static const uint8_t mapFlatE    = 16*tileFlatE;
 static const uint8_t mapRampNE   = 16*tileRampNE;
 static const uint8_t mapRampNW   = 16*tileRampNW;
-static const uint8_t mapDoorNE   = 16*tileDoorNE;
-static const uint8_t mapDoorNW   = 16*tileDoorNW;
+static const uint8_t mapRampSE   = 16*tileRampSE;
+static const uint8_t mapRampSW   = 16*tileRampSW;
 static const uint8_t mapKey      = 16*tileKey;
 
 static const uint8_t imapWidth=9;
@@ -40,9 +40,9 @@ uint8_t imap[] = {
   mapFlat+1,    mapFlat+1,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
   mapFlat+1,    mapFlat+1,    mapFlat+2,  mapRampNW+2, mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
   mapRampNE+1,  mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
-  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
-  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
-  mapFlat+1,    mapKey+2,     mapRampNW+1,mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat+3,  mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapRampSW+1,  mapFlat,    mapFlat,    mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapRampSE+1, mapFlat+1,    mapRampNW+1,mapFlat,    mapFlat,
+  mapFlat+1,    mapKey+2,     mapRampNW+1,mapFlat,     mapFlat,     mapRampNE+1,  mapFlat,    mapFlat,  mapFlat,
   mapFlat+1,    mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
 };
 
@@ -307,7 +307,7 @@ uint8_t heightAtPlayer() {
 
 bool isRamp(uint8_t mx, uint8_t my) {
   uint8_t tile = getTile(mx,my);
-  return (tile >= tileRampNE) && (tile <= tileRampNW);
+  return (tile >= tileRampNE) && (tile <= tileRampSW);
 }
 
 void playSound(uint8_t soundEffect) {
