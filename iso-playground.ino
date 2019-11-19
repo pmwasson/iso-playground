@@ -83,7 +83,7 @@ void loop() {
 
   // Set up
   arduboy.pollButtons();
-  backGround(0xff,0xff);
+  backGround(0x11,0x44);
 
   // Calc player offset once
   playerOffsetX = getPlayerOffsetX();
@@ -184,6 +184,14 @@ bool coordinatesEqual(uint8_t fx, uint8_t fy, uint8_t mx, uint8_t my) {
   return ((fx>>fixedPoint) == mx) && ((fy>>fixedPoint) == my);  
 }
 
+// Good backgrounds:
+//  0000 - black
+//  1144 - 25% gray
+//  55aa - 50% gray
+//  77dd - 75% dray
+//  ffff - white
+//  5555 - horizontal
+//  ff00 - vertical
 void backGround(uint8_t color0, uint8_t color1) {
   uint16_t offset = 0;
   for(uint16_t offset=0; offset < WIDTH*HEIGHT/8;) {
