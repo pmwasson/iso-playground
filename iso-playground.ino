@@ -55,14 +55,15 @@ static const uint8_t speedWalking = 2;
 
 int load;
 
+int8_t playerTargetX = 4; 
+int8_t playerTargetY = 4;
 
-int16_t playerX = 4 << fixedPoint;
-int16_t playerY = 4 << fixedPoint;
+int16_t playerX = playerTargetX << fixedPoint;
+int16_t playerY = playerTargetY << fixedPoint;
 int16_t playerZ = 1 << fixedPoint;
 
 int8_t playerTile = tilePlayerSE;
-int8_t playerTileX; 
-int8_t playerTileY;
+
 int16_t playerOffsetX;
 int16_t playerOffsetY;
 
@@ -82,10 +83,6 @@ void loop() {
   // Set up
   arduboy.pollButtons();
   backGround();
-
-  // Decide on player tile
-  playerTileX = (playerX + fixedPointHalf) >> fixedPoint;
-  playerTileY = (playerY + fixedPointHalf) >> fixedPoint;
 
   // Calc player offset once
   playerOffsetX = getPlayerOffsetX();
@@ -134,12 +131,12 @@ void drawMap(uint8_t mx, uint8_t my) {
 
   if (isPlayerTile(mx,my)) {
     //sprites.drawPlusMask(screenFX(playerX,playerY,playerZ),screenFY(playerX,playerY,playerZ)-2,isoTiles_16x16,playerTile);   
-    sprites.drawPlusMask((WIDTH-16)/2,(HEIGHT-16)/2,isoTiles_16x16,playerTile);   
+    sprites.drawPlusMask((WIDTH-16)/2,(HEIGHT-16)/2-2,isoTiles_16x16,playerTile);   
   }
 }
 
 bool isPlayerTile(uint8_t mx, uint8_t my) {
-  return (mx==playerTileX) && (my==playerTileY);
+  return (mx==((playerX+fixedPointHalf)>>fixedPoint)) && (my==((playerY+fixedPointHalf)>>fixedPoint));
 }
 
 uint8_t getHeight(uint8_t mx, uint8_t my) {
@@ -211,116 +208,93 @@ int16_t screenFY(uint8_t fx, uint8_t fy, int8_t fz) {
 void movement() {
   
   bool move = false;
-  if (arduboy.pressed(UP_BUTTON + RIGHT_BUTTON)) {
-    playerTile = tilePlayerNE;
-    move = true;
-  }
-  if (arduboy.pressed(UP_BUTTON + LEFT_BUTTON)) {
-    playerTile = tilePlayerNW;
-    move = true;
-  }
-  if (arduboy.pressed(DOWN_BUTTON + RIGHT_BUTTON)) {
-    playerTile = tilePlayerSE;
-    move = true;
-  }
-  if (arduboy.pressed(DOWN_BUTTON + LEFT_BUTTON)) {
-    playerTile = tilePlayerSW;
-    move = true;
-  }
-
-  uint8_t prevX = playerX;
-  uint8_t prevY = playerY;
-  uint8_t prevH = heightAtPlayer();
-    
-//  if (arduboy.justPressed(B_BUTTON)) {
-  if (move) {
-    Serial.print("Before:");
-    printFixedPoint(playerX);
-    Serial.print(",");
-    printFixedPoint(playerY);
-    Serial.print(",");
-    printFixedPoint(playerZ);
-    Serial.print(" : ");
-    Serial.print(playerTileX);
-    Serial.print(",");
-    Serial.print(playerTileY);
-    Serial.print(" : ");
-    Serial.print(screenFX(playerX,playerY,playerZ));
-    Serial.print(",");
-    Serial.println(screenFY(playerX,playerY,playerZ));
-
-    switch(playerTile) {
-      case tilePlayerNE:
-        playerY = max(0,playerY-speedWalking);
-        break;
-      case tilePlayerNW:
-        playerX = max(0,playerX-speedWalking);
-        break;
-      case tilePlayerSE:
-        playerX = min((imapWidth-1)<<fixedPoint,playerX+speedWalking);
-        break;
-      case tilePlayerSW:
-        playerY = min((imapHeight-1)<<fixedPoint,playerY+speedWalking);
-        break;      
+  if (atTarget()) {
+    uint8_t currentHeight = getHeight(playerTargetX,playerTargetY);
+    if (arduboy.pressed(UP_BUTTON + RIGHT_BUTTON)) {
+      playerTile = tilePlayerNE;
+      playerTargetY = max(0,playerTargetY-1);
+      move = true;
     }
-    
-    Serial.print("After:");
-    printFixedPoint(playerX);
-    Serial.print(",");
-    printFixedPoint(playerY);
-    Serial.print(",");
-    printFixedPoint(playerZ);
-    Serial.print(" : ");
-    Serial.print(playerTileX);
-    Serial.print(",");
-    Serial.print(playerTileY);
-    Serial.print(" : ");
-    Serial.print(screenFX(playerX,playerY,playerZ));
-    Serial.print(",");
-    Serial.println(screenFY(playerX,playerY,playerZ));
-  }
-
-  uint8_t fh = heightAtPlayer();
-
-  // Check if blocked
-  if (fh >= prevH+fixedPointOne) {
-    if (playerTile == tilePlayerNE || playerTile == tilePlayerSW) {
-      playerY = ((prevY + fixedPointHalf) & ~fixedPointMask) ;
+    if (arduboy.pressed(UP_BUTTON + LEFT_BUTTON)) {
+      playerTile = tilePlayerNW;
+      playerTargetX = max(0,playerTargetX-1);
+      move = true;
     }
-    else {
-      playerX = ((prevX + fixedPointHalf) & ~fixedPointMask) ;
+    if (arduboy.pressed(DOWN_BUTTON + RIGHT_BUTTON)) {
+      playerTile = tilePlayerSE;
+      playerTargetX = min(imapWidth-1,playerTargetX+1);
+      move = true;
     }
-    fh = heightAtPlayer();
+    if (arduboy.pressed(DOWN_BUTTON + LEFT_BUTTON)) {
+      playerTile = tilePlayerSW;
+      playerTargetY = min(imapHeight-1,playerTargetY+1);
+      move = true;
+    }
 
-    Serial.print("Block:");
-    printFixedPoint(playerX);
-    Serial.print(",");
-    printFixedPoint(playerY);
-    Serial.print(",");
-    printFixedPoint(playerZ);
-    Serial.print(" : ");
-    Serial.print(playerTileX);
-    Serial.print(",");
-    Serial.print(playerTileY);
-    Serial.print(" : ");
-    Serial.print(screenFX(playerX,playerY,playerZ));
-    Serial.print(",");
-    Serial.println(screenFY(playerX,playerY,playerZ));  
+    // check for collision
+    if (move) {
+      uint8_t targetHeight = getCompareHeight(playerTargetX,playerTargetY);
+      bool    targetRamp = isRamp(playerTargetX,playerTargetY);
+      targetHeight -= targetRamp;
+      
+      // If blocked, remove target
+      if (targetHeight > currentHeight) {
+  
+        printFixedPoint(playerX);
+        Serial.print(",");
+        printFixedPoint(playerY);
+        Serial.print(",");
+        printFixedPoint(playerZ);
+        Serial.print(" : ");
+        Serial.print(playerTargetX);
+        Serial.print(",");
+        Serial.print(playerTargetY);
+        Serial.print(" : currentHeight=");
+        Serial.print(currentHeight);
+        Serial.print(", targetHeight");
+        Serial.println(targetHeight);
+        
+        playerTargetX = playerX >> fixedPoint;
+        playerTargetY = playerY >> fixedPoint;
+
+      }
+    }
+
+
   }
 
-  if (playerZ < fh) {
-    playerZ++;
+  // Move to target / gravity
+  int16_t mapHeight = heightAtPlayer();
+  if (playerZ < mapHeight) {
+    playerZ += speedWalking;
   }
-  else if (playerZ > fh) {
-    if (playerZ - fh > fixedPointHalf) {
+  else if (playerZ > mapHeight) {
+    if (playerZ - mapHeight > fixedPointHalf) {
       playSound(soundFalling);
     }
     playerZ--;
+  }
+
+  if (playerX < (playerTargetX<<fixedPoint)) {
+    playerX += speedWalking;
+  }
+  else if (playerX > (playerTargetX<<fixedPoint)) {
+    playerX -= speedWalking;
+  }
+  if (playerY < (playerTargetY<<fixedPoint)) {
+    playerY += speedWalking;
+  }
+  else if (playerY > (playerTargetY<<fixedPoint)) {
+    playerY -= speedWalking;
   }
 }
 
 void printFixedPoint(uint16_t value) {
   Serial.print( ((float) value) / 16.0,4);
+}
+
+bool atTarget() {
+  return (playerX==(playerTargetX<<fixedPoint)) && (playerY==(playerTargetY<<fixedPoint));
 }
 
 uint8_t heightAtPlayer() {
