@@ -10,7 +10,7 @@ ArduboyTones sound(arduboy.audio.enabled);
 static const uint8_t tileWidth = 16;
 static const uint8_t tileThickness = 8;
 
-// static const uint8_t tileVoid=  0;
+//static const uint8_t tileVoid=  0;
 static const uint8_t tileFlat     = 0;
 static const uint8_t tileFlatE    = 1;
 static const uint8_t tileRampNE   = 2;
@@ -31,17 +31,19 @@ static const uint8_t mapDoorNE   = 16*tileDoorNE;
 static const uint8_t mapDoorNW   = 16*tileDoorNW;
 static const uint8_t mapKey      = 16*tileKey;
 
-static const uint8_t imapWidth=7;
-static const uint8_t imapHeight=7;
+static const uint8_t imapWidth=9;
+static const uint8_t imapHeight=9;
 
 uint8_t imap[] = {
-  tilePlayerSE*16+4,    mapRampNW+3,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1, mapFlat,
-  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1, mapFlat,
-  mapFlat+1,    mapFlat+1,   mapFlatE+2,  mapRampNW+2,   mapFlat+1,     mapRampNW+1,   mapFlat,
-  mapRampNE+1,  mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
-  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
-  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
-  mapFlat+1,   mapKey+2,     mapRampNW+1,    mapFlat,     mapFlat,     mapFlat,   mapFlat,
+  mapFlat+3,    mapFlat+3,    mapFlat+3,  mapFlat+3,   mapFlat+3,   mapFlat+3,    mapFlat+3,  mapFlat+3,  mapFlat+3,
+  mapFlat+3,    mapRampNW+3,  mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
+  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
+  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapRampNW+2, mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
+  mapRampNE+1,  mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
+  mapFlat+1,    mapKey+2,     mapRampNW+1,mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat+3,  mapFlat,
+  mapFlat+1,    mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
 };
 
 static const uint8_t soundFalling = 0;
@@ -67,7 +69,6 @@ int8_t playerTile = tilePlayerSE;
 int16_t playerOffsetX;
 int16_t playerOffsetY;
 
-
 void setup() {
   // put your setup code here, to run once:
   arduboy.begin();
@@ -82,7 +83,7 @@ void loop() {
 
   // Set up
   arduboy.pollButtons();
-  backGround();
+  backGround(0xff,0xff);
 
   // Calc player offset once
   playerOffsetX = getPlayerOffsetX();
@@ -110,29 +111,40 @@ void loop() {
     load = (load + arduboy.cpuLoad())/2;
   }
   arduboy.setCursor(0,0);
-  arduboy.print(load);
+  arduboy.println(load);
 
   // Display screen
   arduboy.display();
 }
 
-void drawMap(uint8_t mx, uint8_t my) {
+void drawMap(int8_t mx, int8_t my) {
   uint8_t z = getHeight(mx,my);
   uint8_t tile = getTile(mx,my);
   uint8_t zmin = (my<imapHeight-1)  ? getCompareHeight(mx,my+1)+1 : 0;
-  zmin = (mx<imapWidth-1) ? min(zmin,getCompareHeight(mx+1,my)+1) : zmin;
+  zmin = (mx<imapWidth-1) ? min(zmin,getCompareHeight(mx+1,my)+1) : 0;
   zmin = isObject(tile) ? min(zmin,z-1) : zmin;
-
+  
   for (int8_t mz=min(zmin,z); mz < z; mz++) {
-    sprites.drawPlusMask(playerOffsetX+screenX(mx,my,mz),playerOffsetY+screenY(mx,my,mz),isoTiles_16x16,mx==0? tileFlatE: tileFlat);
+    uint8_t fillTile = isEmpty(mx-1,my,mz) ? tileFlatE : tileFlat;
+    sprites.drawPlusMask(playerOffsetX+screenX(mx,my,mz),playerOffsetY+screenY(mx,my,mz),isoTiles_16x16,fillTile);
   }
   uint8_t offset = isObject(tile) ? floatOffset() : 0;
+  if ((tile == tileFlat) && (isEmpty(mx-1,my,z))) {
+    tile = tileFlatE;
+  }
   sprites.drawPlusMask(playerOffsetX+screenX(mx,my,z),playerOffsetY+screenY(mx,my,z) - offset,isoTiles_16x16,tile);
 
   if (isPlayerTile(mx,my)) {
     //sprites.drawPlusMask(screenFX(playerX,playerY,playerZ),screenFY(playerX,playerY,playerZ)-2,isoTiles_16x16,playerTile);   
     sprites.drawPlusMask((WIDTH-16)/2,(HEIGHT-16)/2-2,isoTiles_16x16,playerTile);   
   }
+}
+
+bool isEmpty(int8_t mx, int8_t my, int8_t mz) {
+  if ((mx<0) || (my<0)) {
+    return true;
+  }
+  return (getCompareHeight(mx,my) < mz);
 }
 
 bool isPlayerTile(uint8_t mx, uint8_t my) {
@@ -144,7 +156,7 @@ uint8_t getHeight(uint8_t mx, uint8_t my) {
 }
 
 uint8_t getCompareHeight(uint8_t mx, uint8_t my) {
-  return getHeight(mx,my) - isObject(getTile(mx,my));
+  return getHeight(mx,my) - (isObject(getTile(mx,my)) || isRamp(mx,my));
 }
 
 bool isObject(uint8_t tile) {
@@ -172,11 +184,11 @@ bool coordinatesEqual(uint8_t fx, uint8_t fy, uint8_t mx, uint8_t my) {
   return ((fx>>fixedPoint) == mx) && ((fy>>fixedPoint) == my);  
 }
 
-void backGround() {
+void backGround(uint8_t color0, uint8_t color1) {
   uint16_t offset = 0;
   for(uint16_t offset=0; offset < WIDTH*HEIGHT/8;) {
-    arduboy.sBuffer[offset++] = 0x55;
-    arduboy.sBuffer[offset++] = 0xAA;    
+    arduboy.sBuffer[offset++] = color0;
+    arduboy.sBuffer[offset++] = color1;    
   }
 }
 
@@ -234,33 +246,13 @@ void movement() {
     // check for collision
     if (move) {
       uint8_t targetHeight = getCompareHeight(playerTargetX,playerTargetY);
-      bool    targetRamp = isRamp(playerTargetX,playerTargetY);
-      targetHeight -= targetRamp;
       
       // If blocked, remove target
-      if (targetHeight > currentHeight) {
-  
-        printFixedPoint(playerX);
-        Serial.print(",");
-        printFixedPoint(playerY);
-        Serial.print(",");
-        printFixedPoint(playerZ);
-        Serial.print(" : ");
-        Serial.print(playerTargetX);
-        Serial.print(",");
-        Serial.print(playerTargetY);
-        Serial.print(" : currentHeight=");
-        Serial.print(currentHeight);
-        Serial.print(", targetHeight");
-        Serial.println(targetHeight);
-        
+      if (targetHeight > currentHeight) {         
         playerTargetX = playerX >> fixedPoint;
         playerTargetY = playerY >> fixedPoint;
-
       }
     }
-
-
   }
 
   // Move to target / gravity
@@ -302,7 +294,7 @@ uint8_t heightAtPlayer() {
   uint8_t pmy = playerMY();
   uint8_t tile = getTile(pmx,pmy);
   uint8_t fh = (1+getCompareHeight(pmx,pmy))<<fixedPoint;
-  return isRamp(pmx,pmy) ? fh-fixedPointHalf : fh;
+  return isRamp(pmx,pmy) ? fh+fixedPointHalf : fh;
 }
 
 bool isRamp(uint8_t mx, uint8_t my) {
