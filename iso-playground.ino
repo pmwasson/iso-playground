@@ -10,40 +10,46 @@ ArduboyTones sound(arduboy.audio.enabled);
 static const uint8_t tileWidth = 16;
 static const uint8_t tileThickness = 8;
 
-//static const uint8_t tileVoid=  0;
-static const uint8_t tileFlat     = 0;
-static const uint8_t tileFlatE    = 1;
-static const uint8_t tileRampNE   = 2;
-static const uint8_t tileRampNW   = 3;
-static const uint8_t tileRampSE   = 4;
-static const uint8_t tileRampSW   = 5;
-static const uint8_t tilePlayerNE = 6;
-static const uint8_t tilePlayerNW = 7;
-static const uint8_t tilePlayerSE = 8;
-static const uint8_t tilePlayerSW = 9;
-static const uint8_t tileKey      = 10;
+static const uint8_t tileVoid=  0;
+static const uint8_t tileFlat     = 1;
+static const uint8_t tileFlatE    = 2;
+static const uint8_t tileRampNE   = 3;
+static const uint8_t tileRampNW   = 4;
+static const uint8_t tileRampSE   = 5;
+static const uint8_t tileRampSW   = 6;
+static const uint8_t tilePlayerNE = 7;
+static const uint8_t tilePlayerNW = 8;
+static const uint8_t tilePlayerSE = 9;
+static const uint8_t tilePlayerSW = 10;
+static const uint8_t tileWater    = 11;
+static const uint8_t tileKey      = 12;
 
+static const uint8_t mapVoid     = 16*tileVoid;
 static const uint8_t mapFlat     = 16*tileFlat;
 static const uint8_t mapFlatE    = 16*tileFlatE;
 static const uint8_t mapRampNE   = 16*tileRampNE;
 static const uint8_t mapRampNW   = 16*tileRampNW;
 static const uint8_t mapRampSE   = 16*tileRampSE;
 static const uint8_t mapRampSW   = 16*tileRampSW;
+static const uint8_t mapWater    = 16*tileWater;
 static const uint8_t mapKey      = 16*tileKey;
 
-static const uint8_t imapWidth=9;
-static const uint8_t imapHeight=9;
+static const uint8_t imapWidth=10;
+static const uint8_t imapHeight=12;
 
 uint8_t imap[] = {
-  mapFlat+3,    mapFlat+3,    mapFlat+3,  mapFlat+3,   mapFlat+3,   mapFlat+3,    mapFlat+3,  mapFlat+3,  mapFlat+3,
-  mapFlat+3,    mapRampNW+3,  mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
-  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
-  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapRampNW+2, mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,
-  mapRampNE+1,  mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
-  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapRampSW+1,  mapFlat,    mapFlat,    mapFlat,
-  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapRampSE+1, mapFlat+1,    mapRampNW+1,mapFlat,    mapFlat,
-  mapFlat+1,    mapKey+2,     mapRampNW+1,mapFlat,     mapFlat,     mapRampNE+1,  mapFlat,    mapFlat,  mapFlat,
-  mapFlat+1,    mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,    mapFlat+1,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,    mapFlat,
+  mapFlat+3,    mapFlat+3,    mapFlat+3,  mapFlat+3,   mapFlat+3,   mapRampSE+4,  mapFlat,    mapFlat,    mapFlat+4,  mapFlat,
+  mapFlat+3,    mapRampNW+3,  mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,    mapFlat,
+  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapFlat+1,   mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapFlat,    mapFlat,
+  mapFlat+1,    mapFlat+1,    mapFlat+2,  mapRampNW+2, mapFlat+1,   mapRampNW+1,  mapFlat,    mapFlat,    mapVoid,    mapVoid,
+  mapRampNE+1,  mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapVoid,    mapVoid,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapRampSW+1,  mapFlat,    mapFlat,    mapFlat,    mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapRampSE+1, mapFlat+1,    mapRampNW+1,mapFlat,    mapWater,   mapFlat,
+  mapFlat+1,    mapKey+2,     mapRampNW+1,mapFlat,     mapFlat,     mapRampNE+1,  mapFlat,    mapWater,   mapWater,   mapFlat,
+  mapFlat+1,    mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapWater,   mapWater,   mapFlat,
+  mapFlat,      mapFlat,      mapFlat,    mapFlat,     mapFlat,     mapFlat,      mapFlat,    mapFlat,    mapFlat,    mapVoid,
 };
 
 static const uint8_t soundFalling = 0;
@@ -58,7 +64,7 @@ static const uint8_t speedWalking = 2;
 int load;
 
 int8_t playerTargetX = 4; 
-int8_t playerTargetY = 4;
+int8_t playerTargetY = 9;
 
 int16_t playerX = playerTargetX << fixedPoint;
 int16_t playerY = playerTargetY << fixedPoint;
@@ -90,20 +96,25 @@ void loop() {
   playerOffsetY = getPlayerOffsetY();
 
 
-  // Top triangle  
-  for (int8_t row=0; row < imapHeight; row++) {
-    for (int8_t col=0; col <= min(row,imapWidth-1); col++) {
-      drawMap(col,row-col);
-    }
-  }
+//  // Top triangle  
+//  for (int8_t row=0; row < imapHeight; row++) {
+//    for (int8_t col=0; col <= min(row,imapWidth-1); col++) {
+//      drawMap(col,row-col);
+//    }
+//  }
+//
+//  // Bottom triangle
+//  for (int8_t row=1; row < imapWidth; row++) {
+//    for (int8_t col=0; col < imapWidth-row; col++) {
+//      drawMap(row+col,imapHeight-1-col);
+//    }
+//  }
 
-  // Bottom triangle
-  for (int8_t row=1; row < imapWidth; row++) {
-    for (int8_t col=0; col < imapWidth-row; col++) {
-      drawMap(row+col,imapHeight-1-col);
+  for (int8_t my=0; my < imapHeight; my++) {
+    for (int8_t mx=0; mx < imapWidth; mx++) {
+      drawMap(mx,my);
     }
   }
-  
   movement();
 
   // CPU Lading
@@ -254,9 +265,9 @@ void movement() {
     // check for collision
     if (move) {
       uint8_t targetHeight = getCompareHeight(playerTargetX,playerTargetY);
-      
+      uint8_t targetTile = getTile(playerTargetX,playerTargetY);
       // If blocked, remove target
-      if (targetHeight > currentHeight) {         
+      if ((targetHeight > currentHeight) || (targetTile == tileVoid)) {         
         playerTargetX = playerX >> fixedPoint;
         playerTargetY = playerY >> fixedPoint;
       }
